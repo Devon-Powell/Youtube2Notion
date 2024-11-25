@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube to Notion Noter",
+  "version": "1.0",
+  "description": "Automatically create Notion notes from YouTube video transcripts using Claude AI",
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://api.notion.com/*",
+    "https://api.anthropic.com/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'; connect-src 'self' https://api.anthropic.com https://api.notion.com;"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["content.js"]
+    }
+  ]
+}

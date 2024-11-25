@@ -1,0 +1,159 @@
+﻿@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 0 0% 100%;
+        --foreground: 240 10% 3.9%;
+        --card: 0 0% 100%;
+        --card-foreground: 240 10% 3.9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 240 10% 3.9%;
+        --primary: 216 100% 60%;
+        --primary-foreground: 0 0% 98%;
+        --secondary: 240 4.8% 95.9%;
+        --secondary-foreground: 240 5.9% 10%;
+        --muted: 240 4.8% 95.9%;
+        --muted-foreground: 240 3.8% 46.1%;
+        --accent: 240 4.8% 95.9%;
+        --accent-foreground: 240 5.9% 10%;
+        --destructive: 0 84.2% 60.2%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 240 5.9% 90%;
+        --input: 240 5.9% 90%;
+        --ring: 216 100% 60%;
+        --radius: 0.75rem;
+    }
+
+    .dark {
+        --background: 240 4% 10%; /* 18181B */
+        --foreground: 0 0% 95%;
+        --card: 240 4% 16%; /* 27272A */
+        --card-foreground: 0 0% 95%;
+        --popover: 240 4% 10%;
+        --popover-foreground: 0 0% 95%;
+        --primary: 216 100% 60%; /* 3B82F6 */
+        --primary-foreground: 0 0% 100%;
+        --secondary: 240 4% 16%; /* 27272A */
+        --secondary-foreground: 0 0% 98%;
+        --muted: 240 4% 16%;
+        --muted-foreground: 240 5% 75%;
+        --accent: 240 4% 16%;
+        --accent-foreground: 0 0% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 240 4% 16%;
+        --input: 240 4% 16%;
+        --ring: 216 100% 60%;
+    }
+}
+
+body {
+    width: 400px;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+}
+
+#root {
+    min-height: 450px;
+}
+
+/* Header styling */
+.app-header {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 1rem 1rem 0.75rem 1rem !important;  /* Reduced bottom padding */
+    border-bottom: 1px solid hsl(var(--border)) !important;
+    margin-bottom: 0.5rem !important;  /* Added space after the border */
+}
+
+.app-title {
+    font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.025em !important;
+}
+
+.theme-toggle {
+    padding: 0.5rem !important;
+    border-radius: 9999px !important;
+    transition: background-color 0.2s !important;
+}
+
+/* Tab navigation */
+[role="tablist"] {
+    margin: 0 !important;
+    padding: 2rem !important;  /* Reduced padding */
+    background: transparent !important;
+    display: flex !important;
+    gap: 0.5rem !important;
+}
+
+[role="tab"] {
+    height: 2.5rem !important;
+    background: hsl(var(--secondary)) !important;
+    border-radius: 0.75rem !important;
+    transition: all 0.15s ease !important;
+    color: hsl(var(--muted-foreground)) !important;
+}
+
+[role="tab"][data-state="active"] {
+    background: hsl(var(--primary)) !important;
+    color: hsl(var(--primary-foreground)) !important;
+}
+
+/* Input and textarea improvements */
+input, textarea {
+    border-radius: 0.75rem !important;
+    background: hsl(var(--secondary)) !important;
+    border: 1px solid transparent !important;
+    transition: all 0.15s ease !important;
+    color: hsl(var(--foreground)) !important;
+}
+
+input:focus, textarea:focus {
+    border-color: hsl(var(--primary)) !important;
+    outline: none !important;
+    box-shadow: 0 0 0 1px hsl(var(--primary)) !important;
+}
+
+/* Process button specific styling */
+.process-button {
+    background: hsl(var(--primary)) !important;
+    color: white !important;
+    border-radius: 0.75rem !important;
+    height: 2.75rem !important;
+    font-weight: 500 !important;
+    transition: all 0.15s ease !important;
+}
+
+.process-button:hover {
+    opacity: 0.9 !important;
+}
+
+.process-button:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+}
+
+/* Links */
+a {
+    color: hsl(var(--primary)) !important;
+    text-decoration: none !important;
+    font-weight: 500 !important;
+}
+
+a:hover {
+    text-decoration: underline !important;
+}
+
+/* Status message */
+.status-message {
+    border-radius: 0.75rem !important;
+    background: hsl(var(--secondary)) !important;
+    color: hsl(var(--foreground)) !important;
+}
