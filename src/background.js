@@ -5,6 +5,7 @@ function updateStatus(status) {
     status: status
   }).catch(err => console.error('Error sending status:', err));
 }
+
 // Helper function to inject and verify content script
 async function injectContentScript(tabId) {
   try {
@@ -146,7 +147,216 @@ Your detailed notes here, following the formatting guidelines above
 }
 
 // Function to create Notion page
-// Add this function to your existing background.js
+// Function to create Notion page
+async function createNotionPage(title, videoUrl, summary, notionKey, databaseId, channelName) {
+  try {
+    console.log('Creating Notion page...');
+
+    // Helper function to count leading spaces for indentation
+    const getIndentLevel = (line) => {
+      const match = line.match(/^[ ]*/);
+      return match ? match[0].length : 0;
+    };
+
+    // Helper function to count heading level (#, ##, ###)
+    const getHeadingLevel = (line) => {
+      const match = line.match(/^#{1,6} /);
+      return match ? match[0].trim().length : 0;
+    };
+
+    // Format date for Notion
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    // Extract YouTube video ID and create thumbnail/embed URLs
+    const videoId = videoUrl.match(/(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/watch\?.+&v=))([^"&?\/\s]{11})/)?.[1];
+    const thumbnailUrl = videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : '';
+    const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId}` : videoUrl;
+
+    // Process notes content
+    const notes = summary.notes;
+
+    // Combine all content blocks
+    let allBlocks = [];
+
+    // Add video embed
+    allBlocks.push({
+      object: 'block',
+      type: 'embed',
+      embed: { url: embedUrl }
+    });
+
+    // Add description if available
+    if (summary.shortDescription) {
+      allBlocks.push(
+          {
+            object: 'block',
+            type: 'heading_2',
+            heading_2: {
+              rich_text: [{ type: 'text', text: { content: 'Description' } }]
+            }
+          },
+          {
+            object: 'block',
+            type: 'paragraph',
+            paragraph: {
+              rich_text: [{ type: 'text', text: { content: summary.shortDescription } }]
+            }
+          }
+      );
+    }
+
+    // Add key takeaway if available
+    if (summary.keyTakeaway) {
+      allBlocks.push(
+          {
+            object: 'block',
+            type: 'heading_2',
+            heading_2: {
+              rich_text: [{ type: 'text', text: { content: 'Key Takeaway' } }]
+            }
+          },
+          {
+            object: 'block',
+            type: 'callout',
+            callout: {
+              rich_text: [{ type: 'text', text: { content: summary.keyTakeaway } }],
+              color: 'blue_background',
+              icon: { emoji: '💡' }
+            }
+          }
+      );
+    }
+
+    // Add Notes heading if we had description or takeaway
+    if (summary.shortDescription || summary.keyTakeaway) {
+      allBlocks.push({
+        object: 'block',
+        type: 'heading_2',
+        heading_2: {
+          rich_text: [{ type: 'text', text: { content: 'Notes' } }]
+        }
+      });
+    }
+
+    // Process and add notes content
+    if (notes) {
+      const noteLines = notes.split('\n');
+      for (const line of noteLines) {
+        if (!line.trim()) continue;
+
+        const indentLevel = getIndentLevel(line);
+        const trimmedLine = line.trim();
+        const headingLevel = getHeadingLevel(trimmedLine);
+
+        if (headingLevel > 0) {
+          // Handle headings
+          const headingText = trimmedLine.substring(headingLevel + 1);
+          allBlocks.push({
+            object: 'block',
+            type: `heading_${Math.min(headingLevel, 3)}`,
+            [`heading_${Math.min(headingLevel, 3)}`]: {
+              rich_text: [{ type: 'text', text: { content: headingText } }]
+            }
+          });
+        } else if (trimmedLine.startsWith('-')) {
+          // Handle bullet points
+          const bulletText = trimmedLine.substring(1).trim();
+          allBlocks.push({
+            object: 'block',
+            type: 'bulleted_list_item',
+            bulleted_list_item: {
+              rich_text: [{ type: 'text', text: { content: bulletText } }]
+            }
+          });
+        } else {
+          // Handle regular paragraphs
+          allBlocks.push({
+            object: 'block',
+            type: 'paragraph',
+            paragraph: {
+              rich_text: [{ type: 'text', text: { content: trimmedLine } }]
+            }
+          });
+        }
+      }
+    }
+
+    // Create initial page with basic properties
+    const pageData = {
+      parent: { database_id: databaseId },
+      properties: {
+        Name: { title: [{ text: { content: title } }] },
+        Channel: { rich_text: [{ text: { content: channelName || 'Unknown' } }] },
+        'Created Date': { date: { start: currentDate } },
+        Thumbnail: {
+          files: [{
+            type: 'external',
+            name: 'Thumbnail',
+            external: { url: thumbnailUrl }
+          }]
+        }
+      },
+      children: allBlocks.slice(0, 100) // Initial batch of blocks
+    };
+
+    // Create the page
+    console.log('Creating initial page...');
+    const response = await fetch('https://api.notion.com/v1/pages', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${notionKey}`,
+        'Content-Type': 'application/json',
+        'Notion-Version': '2022-06-28'
+      },
+      body: JSON.stringify(pageData)
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      console.error('Notion API error:', data);
+      throw new Error(data.message || 'Failed to create Notion page');
+    }
+
+    // Append remaining blocks in batches if there are any
+    if (allBlocks.length > 100) {
+      const pageId = data.id;
+      const remainingBlocks = allBlocks.slice(100);
+
+      for (let i = 0; i < remainingBlocks.length; i += 100) {
+        const batch = remainingBlocks.slice(i, i + 100);
+        console.log(`Appending blocks ${i + 101} to ${i + batch.length + 100}`);
+
+        const appendResponse = await fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
+          method: 'PATCH',
+          headers: {
+            'Authorization': `Bearer ${notionKey}`,
+            'Content-Type': 'application/json',
+            'Notion-Version': '2022-06-28'
+          },
+          body: JSON.stringify({ children: batch })
+        });
+
+        if (!appendResponse.ok) {
+          const errorData = await appendResponse.json();
+          console.error('Error appending blocks:', errorData);
+          throw new Error('Failed to append all content blocks');
+        }
+
+        // Add a small delay between batches to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    console.log('Notion page created successfully:', data.url);
+    return data;
+
+  } catch (error) {
+    console.error('Error creating Notion page:', error);
+    throw new Error(`Failed to create Notion page: ${error.message}`);
+  }
+}
+
+
 async function createNotionDatabaseAtUrl(notionKey, pageUrl) {
   try {
     console.log('Creating new database at specified URL...');
@@ -216,7 +426,6 @@ async function createNotionDatabaseAtUrl(notionKey, pageUrl) {
   }
 }
 
-// Add this to your existing message listener in background.js
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'createNotionDatabase') {
     createNotionDatabaseAtUrl(request.notionKey, request.pageUrl)
@@ -233,7 +442,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   // ... your other message handlers ...
 });
 
-// Main processing function
 async function handleVideoProcessing(url) {
   try {
     // Get the active tab
