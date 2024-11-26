@@ -8,44 +8,90 @@ const DatabaseTab = ({ settings, onSaveSettings }) => {
     const [isCreating, setIsCreating] = useState(false);
     const [status, setStatus] = useState('');
 
-    const createDatabase = async () => {
-        if (!pageUrl) {
-            setStatus('Please enter a Notion page URL');
-            return;
-        }
-
-        if (!settings.notionKey) {
-            setStatus('Please configure your Notion API key first');
-            return;
-        }
-
+    async function createDatabase(token, pageUrl) {
         try {
-            setIsCreating(true);
-            setStatus('Creating database...');
+            console.log('Creating new inline database...');
 
-            const response = await chrome.runtime.sendMessage({
-                action: 'createNotionDatabase',
-                notionKey: settings.notionKey,
-                pageUrl: pageUrl
+            // Extract page ID from URL
+            const pageIdMatch = pageUrl.match(/([a-zA-Z0-9]{32})/);
+            if (!pageIdMatch) {
+                throw new Error('Invalid Notion page URL. Please check the URL and try again.');
+            }
+            const pageId = pageIdMatch[1];
+
+            // Create inline database by adding it as a child block
+            const response = await fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Notion-Version': '2022-06-28'
+                },
+                body: JSON.stringify({
+                    children: [{
+                        object: 'block',
+                        type: 'child_database',
+                        child_database: {
+                            title: 'YouTube Notes',
+                        },
+                        properties: {
+                            Name: {
+                                title: {}
+                            },
+                            Channel: {
+                                rich_text: {}
+                            },
+                            'Created Date': {
+                                date: {}
+                            },
+                            Thumbnail: {
+                                files: {}
+                            }
+                        }
+                    }]
+                })
             });
 
-            if (response.error) {
-                throw new Error(response.error);
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to create database');
             }
 
-            // Save the database ID
-            await onSaveSettings('notionDb', response.databaseId);
+            // Get the database ID from the created block
+            const databaseId = data.results[0].id;
 
-            setStatus('Successfully created YouTube Notes database!');
-            setPageUrl(''); // Clear the URL input
+            // Update the database view to gallery
+            await fetch(`https://api.notion.com/v1/databases/${databaseId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Notion-Version': '2022-06-28'
+                },
+                body: JSON.stringify({
+                    title: [{
+                        type: 'text',
+                        text: { content: 'YouTube Notes' }
+                    }],
+                    cover: null,
+                    icon: {
+                        type: 'emoji',
+                        emoji: '📺'
+                    }
+                })
+            });
+
+            return {
+                databaseId,
+                created: true
+            };
 
         } catch (error) {
-            setStatus(`Error: ${error.message}`);
-            console.error('Database creation error:', error);
-        } finally {
-            setIsCreating(false);
+            console.error('Error creating Notion database:', error);
+            throw new Error(`Failed to create database: ${error.message}`);
         }
-    };
+    }
 
     return (
         <div className="space-y-4">
