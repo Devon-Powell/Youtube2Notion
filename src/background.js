@@ -146,245 +146,92 @@ Your detailed notes here, following the formatting guidelines above
 }
 
 // Function to create Notion page
-async function createNotionPage(title, url, summary, notionKey, databaseId, channelName) {
+// Add this function to your existing background.js
+async function createNotionDatabaseAtUrl(notionKey, pageUrl) {
   try {
-    console.log('Creating Notion page...');
+    console.log('Creating new database at specified URL...');
 
-    // Helper functions remain the same
-    const getIndentLevel = line => {
-      const match = line.match(/^[ ]*/);
-      return match ? match[0].length : 0;
-    };
-
-    const getHeadingLevel = line => {
-      const match = line.match(/^#{1,6} /);
-      return match ? match[0].trim().length : 0;
-    };
-
-    const currentDate = new Date().toISOString().split('T')[0];
-    const videoId = url.match(/(?:youtu\.be\/|youtube\.com(?:\/embed\/|\/v\/|\/watch\?v=|\/watch\?.+&v=))([^"&?\/\s]{11})/)?.[1];
-    const thumbnailUrl = videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : '';
-    const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId}` : url;
-
-    // Convert markdown content into Notion blocks
-    const notes = summary.notes;
-    const contentBlocks = notes.split('\n').reduce((blocks, line) => {
-      if (!line.trim()) return blocks;
-
-      const indentLevel = getIndentLevel(line);
-      const trimmedLine = line.trim();
-
-      // Handle headings
-      const headingLevel = getHeadingLevel(trimmedLine);
-      if (headingLevel > 0) {
-        const headingText = trimmedLine.substring(headingLevel + 1);
-        blocks.push({
-          object: 'block',
-          type: `heading_${Math.min(headingLevel, 3)}`,
-          [`heading_${Math.min(headingLevel, 3)}`]: {
-            rich_text: [{
-              type: 'text',
-              text: { content: headingText }
-            }]
-          }
-        });
-        return blocks;
-      }
-
-      // Handle bullet points
-      if (trimmedLine.startsWith('-')) {
-        const bulletText = trimmedLine.substring(1).trim();
-        blocks.push({
-          object: 'block',
-          type: 'bulleted_list_item',
-          bulleted_list_item: {
-            rich_text: [{
-              type: 'text',
-              text: { content: bulletText }
-            }]
-          }
-        });
-        return blocks;
-      }
-
-      // Regular paragraphs
-      blocks.push({
-        object: 'block',
-        type: 'paragraph',
-        paragraph: {
-          rich_text: [{
-            type: 'text',
-            text: { content: trimmedLine }
-          }]
-        }
-      });
-      return blocks;
-    }, []);
-
-    // Prepare initial blocks
-    const initialBlocks = [
-      {
-        object: 'block',
-        type: 'embed',
-        embed: {
-          url: embedUrl
-        }
-      }
-    ];
-
-    // Add structured sections if they exist
-    if (summary.shortDescription) {
-      initialBlocks.push(
-          {
-            object: 'block',
-            type: 'heading_2',
-            heading_2: {
-              rich_text: [{
-                type: 'text',
-                text: { content: 'Description' }
-              }]
-            }
-          },
-          {
-            object: 'block',
-            type: 'paragraph',
-            paragraph: {
-              rich_text: [{
-                type: 'text',
-                text: { content: summary.shortDescription }
-              }]
-            }
-          }
-      );
+    const pageIdMatch = pageUrl.match(/([a-zA-Z0-9]{32})/);
+    if (!pageIdMatch) {
+      throw new Error('Invalid Notion page URL. Please check the URL and try again.');
     }
+    const pageId = pageIdMatch[1];
 
-    if (summary.keyTakeaway) {
-      initialBlocks.push(
-          {
-            object: 'block',
-            type: 'heading_2',
-            heading_2: {
-              rich_text: [{
-                type: 'text',
-                text: { content: 'Key Takeaway' }
-              }]
-            }
-          },
-          {
-            object: 'block',
-            type: 'callout',
-            callout: {
-              rich_text: [{ type: 'text', text: { content: summary.keyTakeaway } }],
-              color: 'blue_background',
-              icon: { emoji: '💡' }
-            }
-          }
-      );
-    }
-
-    // Add notes heading
-    if (summary.shortDescription || summary.keyTakeaway) {
-      initialBlocks.push({
-        object: 'block',
-        type: 'heading_2',
-        heading_2: {
-          rich_text: [{
-            type: 'text',
-            text: { content: 'Notes' }
-          }]
-        }
-      });
-    }
-
-    // Create initial page with first set of blocks
-    const initialPageData = {
-      parent: { database_id: databaseId },
-      properties: {
-        Name: {
-          title: [{ text: { content: title } }]
-        },
-        Channel: {
-          rich_text: [{ text: { content: channelName || 'Unknown' } }]
-        },
-        "Created Date": {
-          date: {
-            start: currentDate
-          }
-        },
-        Thumbnail: {
-          files: [
-            {
-              type: "external",
-              name: "Thumbnail",
-              external: {
-                url: thumbnailUrl
-              }
-            }
-          ]
-        }
-      },
-      children: initialBlocks
-    };
-
-    console.log('Creating initial page...');
-    const response = await fetch('https://api.notion.com/v1/pages', {
+    // Create the database
+    const createResponse = await fetch('https://api.notion.com/v1/databases', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${notionKey}`,
         'Content-Type': 'application/json',
         'Notion-Version': '2022-06-28'
       },
-      body: JSON.stringify(initialPageData)
+      body: JSON.stringify({
+        parent: {
+          type: 'page_id',
+          page_id: pageId
+        },
+        title: [
+          {
+            type: 'text',
+            text: {
+              content: 'YouTube Notes'
+            }
+          }
+        ],
+        icon: {
+          type: 'emoji',
+          emoji: '📺'
+        },
+        properties: {
+          Name: {
+            title: {}
+          },
+          Channel: {
+            rich_text: {}
+          },
+          "Created Date": {
+            date: {}
+          },
+          Thumbnail: {
+            files: {}
+          }
+        }
+      })
     });
 
-    const responseData = await response.json();
+    const createData = await createResponse.json();
 
-    if (!response.ok) {
-      console.error('Notion API error:', responseData);
-      throw new Error(responseData.message || 'Failed to create Notion page');
+    if (!createResponse.ok) {
+      throw new Error(createData.message || 'Failed to create database');
     }
 
-    // If we have more blocks, append them in chunks
-    if (contentBlocks.length > 0) {
-      const pageId = responseData.id;
-      console.log('Appending content blocks...');
-
-      // Split blocks into chunks of 90 to be safe
-      for (let i = 0; i < contentBlocks.length; i += 90) {
-        const chunk = contentBlocks.slice(i, i + 90);
-        console.log(`Appending blocks ${i + 1} to ${i + chunk.length}`);
-
-        const appendResponse = await fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
-          method: 'PATCH',
-          headers: {
-            'Authorization': `Bearer ${notionKey}`,
-            'Content-Type': 'application/json',
-            'Notion-Version': '2022-06-28'
-          },
-          body: JSON.stringify({
-            children: chunk
-          })
-        });
-
-        if (!appendResponse.ok) {
-          const appendError = await appendResponse.json();
-          console.error('Error appending blocks:', appendError);
-          throw new Error('Failed to append all content blocks');
-        }
-
-        // Add a small delay between requests to avoid rate limits
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-    }
-
-    console.log('Notion page created successfully:', responseData.url);
-    return responseData;
+    return {
+      databaseId: createData.id,
+      created: true
+    };
 
   } catch (error) {
-    console.error('Error creating Notion page:', error);
-    throw new Error(`Failed to create Notion page: ${error.message}`);
+    console.error('Error creating Notion database:', error);
+    throw new Error(`Failed to create database: ${error.message}`);
   }
 }
+
+// Add this to your existing message listener in background.js
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'createNotionDatabase') {
+    createNotionDatabaseAtUrl(request.notionKey, request.pageUrl)
+        .then(result => {
+          sendResponse(result);
+        })
+        .catch(error => {
+          sendResponse({
+            error: error.message
+          });
+        });
+    return true; // Keep the message channel open
+  }
+  // ... your other message handlers ...
+});
 
 // Main processing function
 async function handleVideoProcessing(url) {

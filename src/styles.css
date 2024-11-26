@@ -53,13 +53,14 @@
 
 body {
     width: 400px;
+    height: auto;
     margin: 0;
     padding: 0;
     font-family: 'Inter', sans-serif;
 }
 
 #root {
-    min-height: 450px;
+    height: auto;
 }
 
 /* Header styling */
@@ -67,9 +68,7 @@ body {
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    padding: 1rem 1rem 0.75rem 1rem !important;  /* Reduced bottom padding */
-    border-bottom: 1px solid hsl(var(--border)) !important;
-    margin-bottom: 0.5rem !important;  /* Added space after the border */
+    padding: 0.75rem 1rem !important;  /* Reduced padding */
 }
 
 .app-title {
@@ -77,6 +76,7 @@ body {
     font-weight: 600 !important;
     letter-spacing: -0.025em !important;
 }
+
 
 .theme-toggle {
     padding: 0.5rem !important;
@@ -87,14 +87,15 @@ body {
 /* Tab navigation */
 [role="tablist"] {
     margin: 0 !important;
-    padding: 2rem !important;  /* Reduced padding */
+    padding: 0.5rem !important;  /* Reduced padding */
     background: transparent !important;
     display: flex !important;
     gap: 0.5rem !important;
+    border-bottom: 1px solid hsl(var(--border)) !important;
 }
 
 [role="tab"] {
-    height: 2.5rem !important;
+    height: 2rem !important; /* Slightly reduced height */
     background: hsl(var(--secondary)) !important;
     border-radius: 0.75rem !important;
     transition: all 0.15s ease !important;

@@ -7,6 +7,7 @@ import { Textarea } from './components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './components/ui/tabs';
 import './styles.css';
 import PromptEditor from './components/prompt-editor';
+import NotionTab from './components/notion-tab';
 
 const defaultPrompt = `Create detailed, comprehensive notes from this video transcript. Also provide:
 1. A short 1-2 sentence description that captures what this video is about
@@ -147,7 +148,7 @@ const Popup = () => {
   };
 
   return (
-      <div className="w-[400px] min-h-[450px] bg-background text-foreground">
+      <div className="w-[400px] min-h-[450px] bg-background text-foreground flex flex-col">
         <div className="app-header">
           <h1 className="app-title">YT2Notion</h1>
           <Button
@@ -164,15 +165,12 @@ const Popup = () => {
           </Button>
         </div>
 
-        <Tabs defaultValue="prompt" className="w-full">
+        <Tabs defaultValue="prompt" className="w-full flex-grow flex flex-col">
           <TabsList className="flex justify-center">
             <TabsTrigger value="prompt" className="flex-1 flex items-center justify-center">
               <MessageSquare className="h-4 w-4"/>
             </TabsTrigger>
             <TabsTrigger value="notion" className="flex-1 flex items-center justify-center">
-              <Key className="h-4 w-4"/>
-            </TabsTrigger>
-            <TabsTrigger value="database" className="flex-1 flex items-center justify-center">
               <Database className="h-4 w-4"/>
             </TabsTrigger>
             <TabsTrigger value="anthropic" className="flex-1 flex items-center justify-center">
@@ -183,70 +181,27 @@ const Popup = () => {
           <div className="p-4">
             <TabsContent value="prompt" className="mt-0">
               <div className="space-y-4">
+                <h3 className="text-lg font-semibold">Prompt Customization</h3>
                 <p className="text-sm text-muted-foreground">
                   Customize how Claude analyzes your videos:
                 </p>
                 <PromptEditor
-                    placeholder="Create detailed, comprehensive notes from this video transcript. Also provide:
-1. A short 1-2 sentence description that captures what this video is about
-2. A single concise sentence capturing the key takeaway
-
-Then analyze the content and structure of the video to create an organized set of notes that captures the main ideas, key points, and important details.
-
-Formatting guidelines:
-1. Use hierarchical headings:
-   - # for main title/topic
-   - ## for major sections
-   - ### for subsections
-2. Use bullet points (-) for listing items
-3. Indent sub-points with 2 spaces
-4. Include relevant:
-   - Key concepts and definitions
-   - Examples and statistics
-   - Notable quotes
-   - Tools or resources mentioned
-   - Important takeaways"
+                    placeholder={defaultPrompt}
                     value={settings.customPrompt || ''}
                     onChange={(value) => saveSettings('customPrompt', value)}
                 />
               </div>
             </TabsContent>
 
-            <TabsContent value="notion" className="mt-0 space-y-4">
-              <ol className="list-decimal pl-5 space-y-2 text-sm">
-                <li>Go to <a href="https://www.notion.so/my-integrations" target="_blank" rel="noopener noreferrer"
-                             className="text-primary hover:underline">notion.so/my-integrations</a></li>
-                <li>Click "New integration"</li>
-                <li>Name it "YouTube Noter" (or any name you prefer)</li>
-                <li>Select your workspace</li>
-                <li>Copy the Integration Token</li>
-              </ol>
-              <Input
-                  type="password"
-                  placeholder="Paste your Notion Integration Token"
-                  value={settings.notionKey}
-                  onChange={(e) => saveSettings('notionKey', e.target.value)}
-              />
-            </TabsContent>
-
-            <TabsContent value="database" className="mt-0 space-y-4">
-              <ol className="list-decimal pl-5 space-y-2 text-sm">
-                <li>Open your Notion database in full page view</li>
-                <li>Look at the URL in your browser</li>
-                <li>Copy the ID from the URL:</li>
-                <li className="text-muted-foreground">
-                  notion.so/workspace/<span className="font-mono bg-muted px-1">database-id</span>?v=...
-                </li>
-              </ol>
-              <Input
-                  type="text"
-                  placeholder="Paste your Database ID"
-                  value={settings.notionDb}
-                  onChange={(e) => saveSettings('notionDb', e.target.value)}
+            <TabsContent value="notion" className="mt-0">
+              <NotionTab
+                  settings={settings}
+                  onSaveSettings={saveSettings}
               />
             </TabsContent>
 
             <TabsContent value="anthropic" className="mt-0 space-y-4">
+              <h3 className="text-lg font-semibold">API Configuration</h3>
               <ol className="list-decimal pl-5 space-y-2 text-sm">
                 <li>Go to <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer"
                              className="text-primary hover:underline">console.anthropic.com</a></li>
